@@ -13,17 +13,17 @@ class QRCode extends React.Component {
   }
 
   componentDidMount() {
-    this.setSvgXML(this.props.data, this.props.colors);
+    this.setSvgXML(this.props.data, this.props.colors, this.props.logo);
   }
 
   componentWillReceiveProps(nextProps) {
-    this.setSvgXML(nextProps.data, nextProps.colors);
+    this.setSvgXML(nextProps.data, nextProps.colors, nextProps.logo);
   }
 
-  setSvgXML(data, colors) {
+  setSvgXML(data, colors, logo) {
     const d = (data && data.length) ? data : 'cannot be empty';
     const qrdata = qrcode.create(d, { version: 5 });
-    const str = svgRenderQRCode(qrdata, { colors });
+    const str = svgRenderQRCode(qrdata, { colors, logo });
 
     this.setState({
       svgXML: str,
@@ -41,6 +41,7 @@ class QRCode extends React.Component {
 
 QRCode.propTypes = {
   data: PropTypes.string.isRequired,
+  logo: PropTypes.string,
   colors: PropTypes.object.isRequired,
 };
 

@@ -34,6 +34,7 @@ export default class App extends React.Component {
 
     this.state = {
       text: '',
+      logo: null,
       colors: {
         topLeft: {
           inner: '#000000',
@@ -51,12 +52,11 @@ export default class App extends React.Component {
           dark: '#000000',
           light: '#eeeeee',
         },
-      }
+      },
     };
   }
 
   onChange(e) {
-    console.log(e.target.value);
     this.setState({
       text: e.target.value,
     });
@@ -72,8 +72,24 @@ export default class App extends React.Component {
     };
   }
 
+  onFileChange(e) {
+    var file = e.target.files[0];
+
+    if (!file)  return;
+
+    var reader = new FileReader();
+
+    reader.onload = (readerEvent) => {
+      this.setState({
+        logo: readerEvent.target.result,
+      });
+    };
+
+    reader.readAsDataURL(file);
+  }
+
   render() {
-    const { text, colors } = this.state;
+    const { text, colors, logo } = this.state;
 
     return (
       <div>
@@ -90,9 +106,13 @@ export default class App extends React.Component {
 
         <div style={{ float: 'left' }}>
           <div style={{ marginBottom: '20px' }}>
-            <input type='text' onChange={this.onChange} placeholder="text for QR Code" style={{padding: '5px'}} />
+            <input type="text" onChange={this.onChange} placeholder="text for QR Code" style={{padding: '5px'}} />
           </div>
-          <QRCode data={text} colors={colors} />
+          <div style={{ marginBottom: '20px' }}>
+            <input type="file" onChange={this.onFileChange} />
+            <button onClick={() => this.setState({logo: null})}>Clear Logo</button>
+          </div>
+          <QRCode data={text} colors={colors} logo={logo} />
         </div>
       </div>
     );

@@ -64,8 +64,46 @@ function wrapBgColor(qrcodesize, bgColor) {
   };
 }
 
-function stripCorners(data, size) {
-  console.log('stripCorners', data);
+function logoRect(size, percent) {
+  if (percent <= 0 || percent > 0.5) throw new Error('invalid logo percent');
+
+  var logoSize  = Math.floor(size * percent);
+  var offset    = Math.floor((size - logoSize) / 2);
+
+  return {
+    x: offset,
+    y: offset,
+    width: logoSize,
+    height: logoSize,
+  };
+}
+
+function stripLogoSpace(opts, size, data) {
+  if (!opts.logo) return { restArea: data, logoRect: null };
+
+  const rect    = logoRect(size, 0.3); 
+  const { x, y, width, height } = rect;
+  const left    = Math.floor(x);
+  const top     = Math.floor(y);
+  const right   = left + width;
+  const bottom  = top + height;
+
+  var newData = data.slice();
+  
+  // Note: use (top - 1) (bottom + 1) to leave a one-module margin around the logo
+  for (var i = top - 1; i < bottom + 1; i += 1) {
+    for (var j = left - 1; j < right + 1; j += 1) {
+      newData[size * i + j] = 0;
+    }    
+  }    
+
+  return {
+    restArea: newData,
+    logoRect: rect,
+  };
+}
+
+function stripCorners(size, data) {
   var corner = [
     [1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 1],
@@ -148,10 +186,25 @@ function renderCorner(corner, opts) {
   };
 }
 
+// opts:    { scale, margin }
+function renderLogo(url, rect, opts) {
+  return function (content) {
+    if (!url || !rect)  return content;
+
+    const x = (opts.margin + rect.x) * opts.scale;
+    const y = (opts.margin + rect.y) * opts.scale;
+    const w = rect.width * opts.scale;
+    const h = rect.height * opts.scale;
+
+    return [
+       content,
+      `<image x="${x}" y="${y}" width="${w}" height="${h}" xlink:href="${url}" />`,
+    ].join('\n');
+  };
+}
+
 // opts:    { scale, margin, colors: { dark } }
 function renderContent(data, size, opts) {
-  console.log('renderContent', opts);
-
   return function () {
     var defName = 'p';
     var scale   = opts.scale;
@@ -207,20 +260,28 @@ export default function render(qrData, options) {
   var size        = qrData.modules.size;
   var data        = qrData.modules.data;
   var qrcodesize  = (size + opts.margin * 2) * opts.scale;
-  var parts       = stripCorners(data, size);
+  var {
+    corners,
+    mainArea,
+  }               = stripCorners(size, data);
+  var {
+    restArea,
+    logoRect ,
+  }               = stripLogoSpace(opts, size, mainArea);
 
   var fns         = [
     renderFrame(qrcodesize),
     wrapBgColor(qrcodesize, opts.colors.mainArea.light),
+    renderLogo(opts.logo, logoRect, opts),
 
     ...['bottomLeft', 'topRight', 'topLeft'].map(cornerType => {
-      return renderCorner(parts.corners[cornerType], {
+      return renderCorner(corners[cornerType], {
         ...commonOpts,
         colors: opts.colors[cornerType], 
       });
     }),
 
-    renderContent(parts.mainArea, size, {
+    renderContent(restArea, size, {
       ...commonOpts,
       colors: opts.colors.mainArea, 
     })
